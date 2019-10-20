@@ -1,0 +1,216 @@
+### This is the template for Lab 6 - Squid Proxy - MVP A2P ###
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+## Parameters ##
+# KeyName for SSH Key #
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable access to the instances
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: This must be the name of an existing EC2 KeyPair.
+
+### Resources ###
+Resources:
+## Main VPC ##
+  MainVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.10.0.0/16
+      InstanceTenancy: default
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+      - Key: Name
+        Value: Squid Proxy VPC
+# Internet Gateway #
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: Squid IGW
+# Attach IGW to VPC #
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: MainVPC
+      InternetGatewayId:
+        Ref: InternetGateway
+# IGW Route #
+  VPCMainRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId:
+        Ref: VPCMainRouteTable
+      GatewayId:
+        Ref: InternetGateway
+    DependsOn: InternetGatewayAttachment
+# Proxy Route #
+  ProxyRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId:
+        Ref: ProxyRouteTable
+      InstanceId:
+        Ref: PrivateInstance
+
+# DHCP Options #
+  DHCPOptions:
+    Type: AWS::EC2::DHCPOptions
+    Properties:
+      DomainName: us-east-2.compute.internal
+      DomainNameServers:
+      - AmazonProvidedDNS
+# VPC DHCP Associations #
+  VPCDHCPOptionsAssociation:
+    Type: AWS::EC2::VPCDHCPOptionsAssociation
+    Properties:
+      VpcId:
+        Ref: MainVPC
+      DhcpOptionsId:
+        Ref: DHCPOptions
+
+# Route Table #
+  ProxyRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MainVPC
+      Tags:
+      - Key: Name
+        Value: Squid Private Route Table
+  VPCMainRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MainVPC
+      Tags:
+      - Key: Name
+        Value: Squid Public Route Table   
+
+# Subnet Route Table Associations #
+  SubnetRoutePrivate:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: ProxyRouteTable
+      SubnetId:
+        Ref: PrivateSubnet
+  SubnetRoutePublic:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: VPCMainRouteTable
+      SubnetId:
+        Ref: PublicSubnet
+
+# Subnets #
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.10.10.0/24
+      AvailabilityZone: us-east-2a
+      VpcId:
+        Ref: MainVPC
+      Tags:
+      - Key: Name
+        Value: Squid Public Subnet
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.10.20.0/24
+      AvailabilityZone: us-east-2a
+      VpcId:
+        Ref: MainVPC
+      Tags:
+      - Key: Name
+        Value: Squid Private Subnet
+
+# Instances #
+# Amazon Linux 1 AMI 2018.03.0.20190611 x86_64 HVM gp2 #
+  PublicInstance:
+    Type: AWS::EC2::Instance
+    DependsOn: PublicSG
+    Properties:
+      InstanceInitiatedShutdownBehavior: stop
+      ImageId: ami-02f706d959cedf892
+      InstanceType: t3.nano
+      SourceDestCheck: false
+      KeyName:
+        Ref: KeyName
+      Tags:
+      - Key: Name
+        Value: Squip Proxy Instance
+      NetworkInterfaces:
+      - DeleteOnTermination: 'true'
+        Description: Primary network interface
+        DeviceIndex: 0
+        AssociatePublicIpAddress: true
+        SubnetId: 
+            Ref: PublicSubnet
+        GroupSet: 
+          - Ref: PublicSG
+
+  # Private Instance #
+  PrivateInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      DisableApiTermination: 'false'
+      InstanceInitiatedShutdownBehavior: stop
+      ImageId: ami-02f706d959cedf892
+      InstanceType: t2.micro
+      KeyName:
+        Ref: KeyName
+      Monitoring: 'false'
+      Tags:
+      - Key: Name
+        Value: Squid Private Instance
+      NetworkInterfaces:
+      - DeleteOnTermination: 'true'
+        Description: Primary network interface
+        DeviceIndex: 0
+        SubnetId:
+          Ref: PrivateSubnet 
+        GroupSet:
+        - Ref: PrivateSG
+
+## Security Groups ##
+# Allow Ingress on ports: 22, 80, 443, and ICMP #
+  PublicSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG for Squid Proxy
+      VpcId: !Ref MainVPC
+      SecurityGroupIngress:
+         - IpProtocol: tcp
+           CidrIp: 0.0.0.0/0
+           FromPort: '22'
+           ToPort: '22'
+         - IpProtocol: icmp
+           CidrIp: 0.0.0.0/0
+           FromPort: '-1'
+           ToPort: '-1'
+      Tags:
+      - Key: Name
+        Value: Public SG
+  PrivateSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Private SG
+      VpcId: !Ref MainVPC
+      SecurityGroupIngress:
+         - IpProtocol: tcp
+           CidrIp: 0.0.0.0/0
+           FromPort: '22'
+           ToPort: '22'
+         - IpProtocol: icmp
+           CidrIp: 0.0.0.0/0
+           FromPort: '-1'
+           ToPort: '-1'
+      Tags:
+      - Key: Name
+        Value: Private SG

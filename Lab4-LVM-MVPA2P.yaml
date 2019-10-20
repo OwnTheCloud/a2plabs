@@ -1,0 +1,193 @@
+### This is the template for Lab 1 - Apache Tomcat - MVP A2P ###
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+## Parameters ##
+# KeyName for SSH Key #
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable access to the instances
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: This must be the name of an existing EC2 KeyPair.
+  VPCID: 
+    Description: VPC where you want to put the instance
+    Type: AWS::EC2::VPC::Id
+
+### Resources ###
+Resources:
+## Public Instance ##
+# Amazon Linux 1 AMI 2018.03.0.20190611 x86_64 HVM gp2 #
+  LVMInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: us-east-2a
+      DisableApiTermination: 'false'
+      InstanceInitiatedShutdownBehavior: stop
+      ImageId: ami-02f706d959cedf892
+      InstanceType: t3.micro
+      KeyName:
+        Ref: KeyName
+      Tags:
+      - Key: Name
+        Value: LVM Instance
+      Monitoring: 'false'
+      Tags:
+      - Key: Name
+        Value: LVM Instance
+      Volumes:
+      - Device: "/dev/sdf"
+        VolumeId:
+          Ref: LVMVol1
+      - Device: "/dev/sdg"
+        VolumeId:
+          Ref: LVMVol2
+      - Device: "/dev/sdh"
+        VolumeId:
+          Ref: LVMVol3
+      - Device: "/dev/sdi"
+        VolumeId:
+          Ref: LVMVol4
+      - Device: "/dev/sdj"
+        VolumeId:
+          Ref: LVMVol5
+      - Device: "/dev/sdk"
+        VolumeId:
+          Ref: LVMVol6
+      - Device: "/dev/sdl"
+        VolumeId:
+          Ref: LVMVol7
+      - Device: "/dev/sdm"
+        VolumeId:
+          Ref: LVMVol8
+      - Device: "/dev/sdn"
+        VolumeId:
+          Ref: LVMVol9
+      - Device: "/dev/sdo"
+        VolumeId:
+          Ref: LVMVol10
+      NetworkInterfaces:
+      - DeleteOnTermination: 'true'
+        Description: Primary network interface
+        DeviceIndex: 0
+        AssociatePublicIpAddress: true
+        GroupSet: 
+          - Ref: PublicLVMSG
+
+  # LVM Volumes connected to Public Instance #
+  LVMVol1:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: us-east-2a
+      Size: '10'
+      VolumeType: gp2
+      Tags:
+      - Key: Name
+        Value: LVM Volume 1
+
+  LVMVol2:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: us-east-2a
+      Size: '10'
+      VolumeType: gp2
+      Tags:
+      - Key: Name
+        Value: LVM Volume 2
+
+  LVMVol3:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: us-east-2a
+      Size: '10'
+      VolumeType: gp2
+      Tags:
+      - Key: Name
+        Value: LVM Volume 3
+
+  LVMVol4:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: us-east-2a
+      Size: '10'
+      VolumeType: gp2
+      Tags:
+      - Key: Name
+        Value: LVM Volume 4
+
+  LVMVol5:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: us-east-2a
+      Size: '10'
+      VolumeType: gp2
+      Tags:
+      - Key: Name
+        Value: LVM Volume 5
+
+  LVMVol6:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: us-east-2a
+      Size: '10'
+      VolumeType: gp2
+      Tags:
+      - Key: Name
+        Value: LVM Volume 6
+
+  LVMVol7:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: us-east-2a
+      Size: '10'
+      VolumeType: gp2
+      Tags:
+      - Key: Name
+        Value: LVM Volume 7
+
+  LVMVol8:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: us-east-2a
+      Size: '10'
+      VolumeType: gp2
+      Tags:
+      - Key: Name
+        Value: LVM Volume 8
+
+  LVMVol9:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: us-east-2a
+      Size: '10'
+      VolumeType: gp2
+      Tags:
+      - Key: Name
+        Value: LVM Volume 9
+
+  LVMVol10:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: us-east-2a
+      Size: '10'
+      VolumeType: gp2
+      Tags:
+      - Key: Name
+        Value: LVM Volume 10
+
+## Security Groups ##
+# Allow Ingress on ports: 22, 80, 443, and ICMP #
+  PublicLVMSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG for LVM Instance
+      GroupName: PublicLVMSG
+      VpcId: !Ref VPCID
+      SecurityGroupIngress:
+         - IpProtocol: tcp
+           CidrIp: 0.0.0.0/0
+           FromPort: '22'
+           ToPort: '22'
+      Tags:
+      - Key: Name
+        Value: SG for LVM Instance
+

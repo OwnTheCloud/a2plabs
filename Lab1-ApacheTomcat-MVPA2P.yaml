@@ -1,0 +1,68 @@
+### This is the template for Lab 1 - Apache Tomcat - MVP A2P ###
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+## Parameters ##
+# KeyName for SSH Key #
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable access to the instances
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: This must be the name of an existing EC2 KeyPair.
+  VPCID: 
+    Description: VPC where you want to put the instance
+    Type: AWS::EC2::VPC::Id
+
+### Resources ###
+Resources:
+## Public Instance ##
+# Amazon Linux 1 AMI 2018.03.0.20190611 x86_64 HVM gp2 #
+  PublicInstance:
+    Type: AWS::EC2::Instance
+    DependsOn: PublicApacheSG
+    Properties:
+      InstanceInitiatedShutdownBehavior: stop
+      ImageId: ami-02f706d959cedf892
+      InstanceType: t3.nano
+      KeyName:
+        Ref: KeyName
+      Tags:
+      - Key: Name
+        Value: Apache Tomcat Instance
+      NetworkInterfaces:
+      - DeleteOnTermination: 'true'
+        Description: Primary network interface
+        DeviceIndex: 0
+        AssociatePublicIpAddress: true
+        GroupSet: 
+          - Ref: PublicApacheSG
+
+## Security Groups ##
+# Allow Ingress on ports: 22, 80, 443, and ICMP #
+  PublicApacheSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG for Apache Tomcat Instance
+      GroupName: PublicApacheSG
+      VpcId: !Ref VPCID
+      SecurityGroupIngress:
+         - IpProtocol: tcp
+           CidrIp: 0.0.0.0/0
+           FromPort: '22'
+           ToPort: '22'
+         - IpProtocol: tcp
+           CidrIp: 0.0.0.0/0
+           FromPort: '80'
+           ToPort: '80'
+         - IpProtocol: tcp
+           CidrIp: 0.0.0.0/0
+           FromPort: '443'
+           ToPort: '443'
+         - IpProtocol: icmp
+           CidrIp: 0.0.0.0/0
+           FromPort: '-1'
+           ToPort: '-1'
+      Tags:
+      - Key: Name
+        Value: SG for Apache Tomcat Instance
+

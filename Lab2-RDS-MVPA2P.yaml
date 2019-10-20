@@ -1,0 +1,89 @@
+### This is the template for Lab 2 - RDS - MVP A2P ###
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+## Parameters ##
+# KeyName for SSH Key #
+Parameters:
+  DBUser:
+    Default: user 
+    Description: This database admin account username.
+    Type: String
+    MinLength: 1
+    MaxLength: 41
+    AllowedPattern: ^[a-zA-Z0-9]*$
+  DBPassword: 
+    NoEcho: true
+    Description: The database admin account password (8 characters min).
+    Type: String
+    MinLength: 8
+    MaxLength: 41
+    AllowedPattern: ^[a-zA-Z0-9]*$
+  VPCID: 
+    Description: VPC ID
+    Type: "List<AWS::EC2::VPC::Id>"
+  SubnetId: 
+    Description: Subnet IDs (Requires 2)
+    Type: "List<AWS::EC2::Subnet::Id>"
+  SecurityGroupID: 
+    Description: Security Group IDs
+    Type: "List<AWS::EC2::SecurityGroup::Id>"
+
+# Pretty parameter menus #
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Network Configuration"
+        Parameters: 
+          - VPCID
+          - SubnetId
+          - SecurityGroupID
+      - 
+        Label: 
+          default: "RDS Configuration"
+        Parameters: 
+          - DBUser
+          - DBPassword
+    ParameterLabels: 
+      VPCID: 
+        default: "Which VPC should this be deployed to?"
+
+### Resources ###
+Resources:
+# RDS Instance for Lab #
+  MyDB: 
+    Type: "AWS::RDS::DBInstance"
+    Properties: 
+      AllocatedStorage: "20"
+      DBInstanceClass: db.t3.small
+      DBName: MyRDS
+      Engine: MySQL
+      EngineVersion: "5.7.22"
+      MasterUserPassword: 
+        Ref: DBPassword
+      MasterUsername: 
+        Ref: DBUser
+      DBSubnetGroupName: 
+        Ref: myDBSubnetGroup
+      VPCSecurityGroups:
+        Ref: SecurityGroupID
+      PubliclyAccessible: true
+      Tags: 
+        - 
+          Key: Name
+          Value: "RDS SQL Database"
+  myDBSubnetGroup: 
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties: 
+      DBSubnetGroupDescription: RDS DB Subnet Group
+      SubnetIds: 
+        Ref: SubnetId
+      Tags: 
+        - 
+          Key: Name
+          Value: DB Subnet Group
+
+
+
